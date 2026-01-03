@@ -1,68 +1,90 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
+/* 🔗 BACKEND API URL (Render) */
+const API_URL = "https://task-tracker-backend-75cj.onrender.com";
+
 function App() {
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState("Low");
   const [dueDate, setDueDate] = useState("");
-  const [view, setView] = useState("All"); // 👈 NEW
+  const [view, setView] = useState("All");
 
-  // FETCH TASKS
+  /* 📥 Fetch all tasks */
   const fetchTasks = async () => {
-    const res = await fetch("/api/tasks");
-    const data = await res.json();
-    setTasks(data);
+    try {
+      const res = await fetch(`${API_URL}/api/tasks`);
+      const data = await res.json();
+      setTasks(data);
+    } catch (error) {
+      console.error("Error fetching tasks", error);
+    }
   };
 
   useEffect(() => {
     fetchTasks();
   }, []);
 
-  // ADD TASK
+  /* ➕ Add new task */
   const addTask = async () => {
     if (!title || !dueDate) {
       alert("Title and Due Date required");
       return;
     }
 
-    await fetch("/api/tasks/add", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title,
-        priority,
-        dueDate,
-        status: "Pending"
-      })
-    });
+    try {
+      await fetch(`${API_URL}/api/tasks/add`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          priority,
+          dueDate,
+          status: "Pending",
+        }),
+      });
 
-    setTitle("");
-    setPriority("Low");
-    setDueDate("");
-    fetchTasks();
+      setTitle("");
+      setPriority("Low");
+      setDueDate("");
+      fetchTasks();
+    } catch (error) {
+      console.error("Error adding task", error);
+    }
   };
 
-  // TOGGLE STATUS
+  /* 🔄 Toggle Pending / Completed */
   const toggleStatus = async (id, status) => {
-    await fetch(`/api/tasks/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        status: status === "Pending" ? "Completed" : "Pending"
-      })
-    });
-    fetchTasks();
+    try {
+      await fetch(`${API_URL}/api/tasks/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: status === "Pending" ? "Completed" : "Pending",
+        }),
+      });
+      fetchTasks();
+    } catch (error) {
+      console.error("Error updating status", error);
+    }
   };
 
-  // DELETE TASK
+  /* 🗑 Delete task */
   const deleteTask = async (id) => {
     if (!window.confirm("Delete this task?")) return;
-    await fetch(`/api/tasks/${id}`, { method: "DELETE" });
-    fetchTasks();
+
+    try {
+      await fetch(`${API_URL}/api/tasks/${id}`, {
+        method: "DELETE",
+      });
+      fetchTasks();
+    } catch (error) {
+      console.error("Error deleting task", error);
+    }
   };
 
-  // 👇 FILTER LOGIC (FIXED)
+  /* 🔍 Filter tasks */
   const visibleTasks = tasks.filter((task) => {
     if (view === "Pending") return task.status === "Pending";
     if (view === "Completed") return task.status === "Completed";
@@ -71,7 +93,7 @@ function App() {
 
   return (
     <div className="dashboard">
-      {/* SIDEBAR */}
+      {/* Sidebar */}
       <aside className="sidebar">
         <h2>Task Tracker</h2>
         <ul>
@@ -96,9 +118,8 @@ function App() {
         </ul>
       </aside>
 
-      {/* MAIN */}
+      {/* Main Content */}
       <main className="main">
-        {/* HEADER */}
         <div className="header">
           <h1>{view} Tasks</h1>
 
@@ -108,6 +129,15 @@ function App() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
+
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+            >
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
 
             <input
               type="date"
@@ -119,10 +149,9 @@ function App() {
           </div>
         </div>
 
-        {/* TASK LIST */}
         <div className="task-list">
           {visibleTasks.length === 0 && (
-            <p style={{ color: "#aaa" }}>No tasks found</p>
+            <p className="empty">No tasks found</p>
           )}
 
           {visibleTasks.map((task) => (
@@ -132,7 +161,7 @@ function App() {
                 task.status === "Completed" ? "completed" : ""
               }`}
             >
-              <div>
+              <div className="task-info">
                 <h3>{task.title}</h3>
                 <p>Priority: {task.priority}</p>
                 <p>Status: {task.status}</p>
@@ -141,7 +170,9 @@ function App() {
 
               <div className="actions">
                 <button onClick={() => toggleStatus(task._id, task.status)}>
-                  {task.status === "Pending" ? "Mark Completed" : "Mark Pending"}
+                  {task.status === "Pending"
+                    ? "Mark Completed"
+                    : "Mark Pending"}
                 </button>
 
                 <button
